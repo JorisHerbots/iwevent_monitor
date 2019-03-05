@@ -20,8 +20,8 @@ class UncleanShutdownException(Exception):
 
 class Iwevents(enum.Enum):
     """Currently supported list of events from iwevent"""
-    ASSOCIATION_NEW = enum.auto()
-    ASSOCIATION_LOST = enum.auto()
+    ASSOCIATION_NEW = 0
+    ASSOCIATION_LOST = 1
 
     @classmethod
     def check_value_existence(cls, enum_value):
