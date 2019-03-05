@@ -13,5 +13,9 @@ Enables event driven code based on occurrences from wireless network interfaces
 Linked methods will automatically be executed whenever their corresponding wireless interface event is detected.
 Currently supported events: connection established, connection lost
 
+IweventMonitor contains two parameters which decide how linked methods are executed:
+* `use_threading` (default `True`) - Uses threads to call each method; specifying this as `False` will execute all linked methods consecutively in order of linking
+* `daemonized_threads` (default `False`) - Spawns threads as daemons
+
 ## Example
 See `example.py`.

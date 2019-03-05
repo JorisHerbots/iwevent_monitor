@@ -42,13 +42,19 @@ class IweventMonitor:
         register_method_for_event(Iwevents value, method)
 
     IweventMonitor object needs to be cleaned up with its builtin stop() method.
+
+    :param use_threading: Use threads for running event methods
+    :param daemonized_threads: Spawn threads as daemons
     """
-    def __init__(self):
+    def __init__(self, use_threading=True, daemonized_threads=False):
 
         self.__check_iwevent_presence()
         self.monitor_thread = threading.Thread(target=self.__iwevent_parser)
         self.monitor_thread.start()
         self.iwevent_process = None
+        self.__use_threading = use_threading
+        self.__daemonized_threads = daemonized_threads
+        self.__threads = []
 
         self.connected_methods = {}
         for event in list(Iwevents):
@@ -59,6 +65,15 @@ class IweventMonitor:
         if process.returncode is not 0:
             raise IweventNotInstalledException()
 
+    def __start_method(self, method):
+        if not self.__use_threading:
+            return method()
+        else:
+            t = threading.Thread(target=method, daemon=self.__daemonized_threads)
+            if self.__daemonized_threads:
+                self.__threads.append(t)
+            t.start()
+
     def __process_single_event(self, data):
         data = data.lower()
         if "new access point/cell" not in data:
@@ -66,11 +81,11 @@ class IweventMonitor:
 
         if len(self.connected_methods[Iwevents.ASSOCIATION_NEW.value]) > 0 and "not-associated" not in data:
             for method in self.connected_methods[Iwevents.ASSOCIATION_NEW.value]:
-                method()
+                self.__start_method(method)
 
         if len(self.connected_methods[Iwevents.ASSOCIATION_LOST.value]) > 0 and "not-associated" in data:
             for method in self.connected_methods[Iwevents.ASSOCIATION_LOST.value]:
-                method()
+                self.__start_method(method)
 
     def __iwevent_parser(self):
         self.iwevent_process = subprocess.Popen(['iwevent'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -86,11 +101,17 @@ class IweventMonitor:
         :raises: UncleanShutdownException when the monitor thread cannot be killed.
         """
         if self.iwevent_process:
-            self.iwevent_process.kill()
-        if self.monitor_thread:
-            self.monitor_thread.join(timeout=5)
+            try:
+                self.iwevent_process.kill()
+            except ProcessLookupError:
+                pass # Silently ignore this as the process is simply dead already
+            if self.monitor_thread:
+                self.monitor_thread.join(timeout=5)
             if self.monitor_thread.is_alive(): # 5sec timeout
                 raise UncleanShutdownException("Could not stop iwevent monitor thread.")
+        if not self.__daemonized_threads:
+            for t in self.__threads:
+                t.join()
 
     def association_new_event(self):
         """Decorator for new association events"""

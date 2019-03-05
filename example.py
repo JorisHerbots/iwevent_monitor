@@ -4,7 +4,7 @@ import time
 
 print("Starting iwevent monitor!")
 # Monitor object
-monitor = IweventMonitor()
+monitor = IweventMonitor(use_threading=True, daemonized_threads=True)
 
 
 # Methods linked to wireless connect and disconnect events
@@ -16,6 +16,7 @@ def new():
 @monitor.association_lost_event()
 def lost():
     print("ASSOCIATION LOST")
+    time.sleep(10000)
 
 
 try:
